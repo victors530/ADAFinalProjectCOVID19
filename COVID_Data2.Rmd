@@ -1,0 +1,285 @@
+---
+title: "COVID19"
+author: "Victor Martinez-Cassmeyer"
+date: "3/19/2020"
+output: html_document
+---
+
+# Load Data
+```{r setup, include=FALSE, warning=FALSE, message=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+############################################################
+##### We suggest using library(tidyverse)! #################
+##### By loading in tidyverse, many useful packages will ###
+##### automatically load including ggplot2, dplyr, & tidyr.#
+############################################################
+
+library(tidyverse)
+
+covid_org5 <- read_csv("https://raw.githubusercontent.com/beoutbreakprepared/nCoV2019/master/dataset_archive/covid-19.data.2020-04-14T075627.csv")
+```
+
+# Data Management
+```{r, warning=FALSE}
+
+covid.clean <- covid_org5 %>%
+  mutate(outcomec = recode(covid_org5$outcome,
+                         "death" = "died",
+                         "died" = "died",
+                         "dead" = "died",
+                         "discharge" = "discharge",
+                         "discharged" = "discharge",
+                         "Discharged" = "discharge",
+                         "Discharged from hospital" = "discharge",
+                         "recovered" = "discharge",
+                         "not hospitalized"= "not hospitalized",
+                         "released from quaratine" = "released from quarantine",
+                         "severe" = "severe",
+                         "stable" = "stable",
+                         "alive" = "alive",
+                         "Alive" = "alive",
+                         "Receiving Treatment" = "hospitalized",
+                         "Critical condition" = "hospitalized",
+                         "critical condition, intubated as of 14.02.2020" = "hospitalized",
+                         "Dead" = "died",
+                         "Death" = "died",
+                         "Died" = "died",
+                         "Deceased" = "died",
+                         "Recovered" = "discharge",
+                         "recovering at home 03.03.2020" = "discharge",
+                         "severe illness" = "severe",
+                         "stable condition" = "stable",
+                         "Stable" = "stable",
+                         "Symptoms only improved with cough. Currently hospitalized for follow-up." = "hospitalized",
+                         "treated in an intensive care unit (14.02.2020)" = "hospitalized",
+                         "Under treatment" = "hospitalized",
+                         "unstable" = "hospitalized")) %>%
+  mutate_all(as.character) %>% 
+  #combine date_onset_symptoms and "date_admission_hospital" into onset_date
+  mutate(onset_date = ifelse(is.na(date_onset_symptoms),date_admission_hospital , date_onset_symptoms)) %>%
+  #combined onset_date with date_confirmation to become onsetdate
+  mutate(onsetdate = ifelse(is.na(onset_date),date_confirmation , onset_date)) %>%
+  #select wanted variables  
+  select(ID, age, sex, country, onsetdate, outcomec, date_death_or_discharge) %>%
+  mutate(country_binary = ifelse(country == "China", "china", "country_other")) %>%
+  # make binary event variable
+  mutate(event = ifelse(outcomec == "died", 1, 0)) %>%
+  # make time variable
+  # 1. random row was a range, corrected it to earliest point
+  mutate(onsetdate = ifelse(onsetdate == "25.02.2020 - 26.02.2020", "25.02.2020", onsetdate)) %>%
+  # 2. correct date formats
+  mutate(onsetdate_correct = as.Date(gsub('[.]', '-', onsetdate), "%d-%m-%Y")) %>%
+  mutate(datedeathordischarge_correct = as.Date(gsub('[.]', '-', date_death_or_discharge), "%d-%m-%y")) %>%
+  # 3. subtract dates and record output in days
+  mutate(time = difftime(datedeathordischarge_correct, onsetdate_correct, units = "days"), time = as.numeric(time)) %>%
+  # filter times that are negative (due to testing delays)
+  filter(time >= 0) %>%
+  mutate(age_cat = recode(age,
+                         "1" = "35 or lower",
+                         "4" = "35 or lower",
+                         "7" = "35 or lower",
+                         "9" = "35 or lower",
+                         "8" = "35 or lower",
+                         "13" = "35 or lower",
+                         "16" = "35 or lower",
+                         "20"= "35 or lower",
+                         "21" = "35 or lower",
+                         "22" = "35 or lower",
+                         "23" = "35 or lower",
+                         "24" = "35 or lower",
+                         "25" =  "35 or lower",
+                         "26" = "35 or lower",
+                         "27" = "35 or lower",
+                         "28" = "35 or lower",
+                         "29" = "35 or lower",
+                         "20-29" = "35 or lower",
+                         "30" = "35 or lower",
+                         "31" = "35 or lower",
+                         "32" = "35 or lower",
+                         "33" = "35 or lower",
+                         "34" = "35 or lower",
+                         "35" = "35 or lower",
+                         "36" = "36-65",
+                         "37" = "36-65",
+                         "38" = "36-65",
+                         "39" = "36-65",
+                         "40" = "36-65",
+                         "41" = "36-65",
+                         "42" = "36-65",
+                         "43" = "36-65",
+                         "44" = "36-65",
+                         "45" = "36-65",
+                         "46" = "36-65",
+                         "47" = "36-65",
+                         "48" = "36-65",
+                         "49" = "36-65",
+                         "50" = "36-65",
+                         "51" = "36-65",
+                         "52" = "36-65",
+                         "53" = "36-65",
+                         "54" = "36-65",
+                         "55" = "36-65",
+                         "56" = "36-65",
+                         "57" = "36-65",
+                         "58" = "36-65",
+                         "59" = "36-65",
+                         "50-59" = "36-65",
+                         "60" = "36-65",
+                         "61" = "36-65",
+                         "62" = "36-65",
+                         "63" = "36-65",
+                         "64" = "36-65",
+                         "65" = "36-65",
+                         "66" = "66 and older",
+                         "67" = "66 and older",
+                         "68" = "66 and older",
+                         "69" = "66 and older",
+                         "70" = "66 and older",
+                         "71" = "66 and older",
+                         "72" = "66 and older",
+                         "73" = "66 and older",
+                         "74" = "66 and older",
+                         "75" = "66 and older",
+                         "76" = "66 and older",
+                         "77" = "66 and older",
+                         "78" = "66 and older",
+                         "79" = "66 and older",
+                         "70-79" = "66 and older",
+                         "80-" = "66 and older",
+                         "81" = "66 and older",
+                         "82" = "66 and older",
+                         "83" = "66 and older",
+                         "94" = "66 and older",
+                         "84" = "66 and older",
+                         "85" = "66 and older",
+                         "86" = "66 and older",
+                         "87" = "66 and older",
+                         "88" = "66 and older",
+                         "89" = "66 and older",
+                         "80" = "66 and older",
+                         "80-89" = "66 and older",
+                         "92" = "66 and older",
+                         "90-99" = "66 and older",
+                         "95" = "66 and older",
+                         "0.25" = NA_character_,
+                         "60-69" = NA_character_)) %>%
+  mutate(country_binary2 = ifelse(country_binary == "china", 1, 0)) %>%
+  mutate(age_cat2 = ifelse(age_cat == "35 or lower", 0, 1)) %>%
+  mutate(age_cat2 = ifelse(age_cat == "36-65", 1, age_cat2)) %>%
+  mutate(age_cat2 = ifelse(age_cat == "66 and older", 2, age_cat2)) %>%
+  mutate(sex2 = ifelse(sex == "male", 1, 0)) %>%
+  drop_na()
+
+# check event var 
+table(covid.clean$outcomec, covid.clean$event)
+
+#check age variable
+table(covid.clean$age_cat)
+
+# remove orignal dataset
+rm(list = "covid_org5")
+
+# export final dataset
+write.csv(covid.clean, "covid.clean.csv")
+```
+
+
+
+
+
+
+# Junkyard
+```{r}
+##****** NOTE: THIS IS A "SPARE" AGE BLOCK RECODE IN CASE WE NEED TO GO IT AGAIN.
+# covid.clean$age_cat <- recode(covid.clean$age,
+#                          "1" = "less than 18",
+#                          "4" = "less than 18",
+#                           "7" = "less than 18",
+#                           "9" = "less than 18",
+#                           "8" = "less than 18",
+#                           "13" = "less than 18",
+#                           "16" = "less than 18",
+#                           "20"= "18-35",
+#                           "21" = "18-35",
+#                           "22" = "18-35",
+#                           "23" = "18-35",
+#                           "24" = "18-35",
+#                           "25" =  "18-35",
+#                           "26" = "18-35",
+#                           "27" = "18-35",
+#                           "28" = "18-35",
+#                          "29" = "18-35",
+#                          "20-29" = "18-35",
+#                           "30" = "18-35",
+#                           "31" = "18-35",
+#                           "32" = "18-35",
+#                          "33" = "18-35",
+#                          "34" = "18-35",
+#                          "35" = "18-35",
+#                          "36" = "36-59",
+#                          "37" = "36-59",
+#                          "38" = "36-59",
+#                          "39" = "36-59",
+#                          "40" = "36-59",
+#                          "41" = "36-59",
+#                          "42" = "36-59",
+#                          "43" = "36-59",
+#                          "44" = "36-59",
+#                          "45" = "36-59",
+#                          "46" = "36-59",
+#                          "47" = "36-59",
+#                          "48" = "36-59",
+#                          "49" = "36-59",
+#                          "50" = "36-59",
+#                          "51" = "36-59",
+#                          "52" = "36-59",
+#                          "53" = "36-59",
+#                          "54" = "36-59",
+#                          "55" = "36-59",
+#                          "56" = "36-59",
+#                          "57" = "36-59",
+#                          "58" = "36-59",
+#                          "59" = "36-59",
+#                          "50-59" = "36-59",
+#                          "60" = "60-79",
+#                          "61" = "60-79",
+#                          "62" = "60-79",
+#                          "63" = "60-79",
+#                          "64" = "60-79",
+#                          "65" = "60-79",
+#                          "66" = "60-79",
+#                          "67" = "60-79",
+#                          "68" = "60-79",
+#                          "69" = "60-79",
+#                          "70" = "60-79",
+#                          "71" = "60-79",
+#                          "72" = "60-79",
+#                          "73" = "60-79",
+#                          "74" = "60-79",
+#                          "75" = "60-79",
+#                          "76" = "60-79",
+#                          "77" = "60-79",
+#                          "78" = "60-79",
+#                          "79" = "60-79",
+#                          "70-79" = "60-79",
+#                          "80-" = "80 and older",
+#                          "81" = "80 and older",
+#                          "82" = "80 and older",
+#                          "83" = "80 and older",
+#                          "94" = "80 and older",
+#                          "84" = "80 and older",
+#                          "85" = "80 and older",
+#                         "86" = "80 and older",
+#                          "87" = "80 and older",
+#                          "88" = "80 and older",
+#                          "89" = "80 and older",
+#                          "80" = "80 and older",
+#                         "80-89" = "80 and older",
+#                         "92" = "80 and older",
+#                          "90-99" = "80 and older",
+#                          "95" = "80 and older",
+#                          "0.25" = NA_character_)
+```
+
