@@ -1,6 +1,6 @@
 ---
 title: "COVID19"
-author: "Victor Martinez-Cassmeyer"
+author: "Amanda Gilbert, Pranav Nandan, Victor Martinez-Cassmeyer"
 date: "3/19/2020"
 output: html_document
 ---
