@@ -10,3 +10,5 @@ Final Project Code.Rmd - contains our analysis code
 
 
 covid.clean.dataset.csv - the final dataset after data management/cleaning
+
+COVID_Data2.Rmd - contains some data management/cleaning code
