@@ -7,4 +7,6 @@ April 2020
 Original data comes from beoutbreakprepared/nCoV2019
 
 Final Project Code.Rmd - contains our analysis code
+
+
 covid.clean.dataset.csv - the final dataset after cleaning
